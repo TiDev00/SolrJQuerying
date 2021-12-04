@@ -20,7 +20,7 @@ public class Searcher {
     public static void main(String[] args) throws IOException {
         System.out.println("======================== SolrJ Querying ========================");
         Searcher searcher = new Searcher();
-        searcher.queryingByUsingSolrParams("src/main/resources/short_q.csv");
+        searcher.queryingByUsingSolrParams("src/main/resources/long_q.csv");
     }
 
     /**
@@ -48,7 +48,7 @@ public class Searcher {
      * @param documents the search results
      */
     private static void printResults(String qNum, SolrDocumentList documents) {
-//        System.out.printf("Found %d documents\n", documents.getNumFound());
+        System.out.printf("Found %d documents\n", documents.getNumFound());
         for (SolrDocument document : documents) {
             final String docno = (String) document.getFirstValue("docno");
             final float score = (Float) document.getFirstValue("score");
