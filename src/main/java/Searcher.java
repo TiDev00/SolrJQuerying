@@ -6,6 +6,8 @@ import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.params.MapSolrParams;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,10 +17,10 @@ public class Searcher {
     /**
      * The static solrClient instance.
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         System.out.println("======================== SolrJ Querying ========================");
         Searcher searcher = new Searcher();
-        searcher.queryingByUsingSolrParams();
+        searcher.queryingByUsingSolrParams("src/main/resources/short_q.csv");
     }
 
     /**
@@ -45,38 +47,47 @@ public class Searcher {
      *
      * @param documents the search results
      */
-    private static void printResults(SolrDocumentList documents) {
-        System.out.printf("Found %d documents\n", documents.getNumFound());
+    private static void printResults(String qNum, SolrDocumentList documents) {
+//        System.out.printf("Found %d documents\n", documents.getNumFound());
         for (SolrDocument document : documents) {
             final String docno = (String) document.getFirstValue("docno");
-            final String head = (String) document.getFirstValue("head");
-            System.out.printf("docno = %s; head = %s\n", docno, head);
+            final float score = (Float) document.getFirstValue("score");
+            System.out.print(qNum + "\tQ0\t" + docno + "\t" + score + "\tSTANDARD\n");
         }
     }
 
     /**
      * Querying documents by using SolrParams.
      */
-    public void queryingByUsingSolrParams() {
-        // constructs a MapSolrParams instance
-        final Map<String, String> queryParamMap = new HashMap<>();
-        queryParamMap.put("q", "head:president, text:president"); // search documents containing price in field text
-        queryParamMap.put("fl", "docno, head");
-        queryParamMap.put("q.op", "AND");
-        queryParamMap.put("sort", "asc");
-        MapSolrParams queryParams = new MapSolrParams(queryParamMap);
+    public void queryingByUsingSolrParams(String myFile) throws IOException {
+        BufferedReader csvReader = new BufferedReader(new FileReader(myFile));
+        String row;
+        while ((row = csvReader.readLine()) != null) {
+            String[] datas = row.split(";");
 
-        // sends search request and gets the response
-        QueryResponse response = null;
-        try {
-            response = solrClient.query(queryParams);
-        } catch (SolrServerException | IOException e) {
-            System.err.printf("Failed to search documents: %s", e.getMessage());
-        }
+            // constructs a MapSolrParams instance
+            final Map<String, String> queryParamMap = new HashMap<>();
+            queryParamMap.put("q", datas[1]);
+            queryParamMap.put("q.op", "OR");
+            queryParamMap.put("fl", "docno,score");
+            queryParamMap.put("rows", "500");
+            queryParamMap.put("df", "text");
+            queryParamMap.put("sort", "score desc");
+            MapSolrParams queryParams = new MapSolrParams(queryParamMap);
 
-        // print results to stdout
-        if (response != null) {
-            printResults(response.getResults());
+            // sends search request and gets the response
+            QueryResponse response = null;
+            try {
+                response = solrClient.query(queryParams);
+            } catch (SolrServerException | IOException e) {
+                System.err.printf("Failed to search documents: %s", e.getMessage());
+            }
+
+            // print results to stdout
+            if (response != null) {
+                printResults(datas[0], response.getResults());
+            }
         }
+        csvReader.close();
     }
 }
